@@ -12,6 +12,13 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
+    - name: Verify Docker and AWS CLI
+      run: |
+        which docker
+        docker --version
+        which aws
+        aws --version
+
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
@@ -21,7 +28,8 @@ jobs:
 
     - name: Create ECR public repo if not exists
       run: |
-        aws ecr-public describe-repositories --region us-east-1 \
+        aws ecr-public describe-repositories \
+          --region us-east-1 \
           --repository-names ${{ secrets.ECR_REPO_NAME }} || \
         aws ecr-public create-repository \
           --repository-name ${{ secrets.ECR_REPO_NAME }} \
@@ -34,9 +42,12 @@ jobs:
 
     - name: Build Docker image
       run: |
-        IMAGE_TAG="${{ secrets.ECR_PUBLIC_ALIAS }}/${{ secrets.ECR_REPO_NAME }}"
+        IMAGE_TAG="public.ecr.aws/${{ secrets.ECR_PUBLIC_ALIAS }}/${{ secrets.ECR_REPO_NAME }}"
         docker build -t $IMAGE_TAG .
         echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
     - name: Push Docker image to Amazon ECR Public
-      run: docker push $IMAGE_TAG
+      run: |
+        docker push $IMAGE_TAG
+      env:
+        IMAGE_TAG: ${{ env.IMAGE_TAG }}
