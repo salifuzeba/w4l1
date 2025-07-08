@@ -47,3 +47,4 @@ jobs:
         docker push "$IMAGE_URI"
       env:
         IMAGE_URI: ${{ env.IMAGE_URI }}
+        
