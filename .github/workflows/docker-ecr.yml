@@ -1,4 +1,4 @@
-name: Build and Push Docker Image to ECR Public
+name: Build and Push Docker Image to ECR Private
 
 on:
   push:
@@ -26,28 +26,29 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ secrets.AWS_REGION }}
 
-    - name: Create ECR public repo if not exists
+    - name: Create ECR private repo if not exists
       run: |
-        aws ecr-public describe-repositories \
-          --region eu-west-1 \
+        aws ecr describe-repositories \
+          --region ${{ secrets.AWS_REGION }} \
           --repository-names ${{ secrets.ECR_REPO_NAME }} || \
-        aws ecr-public create-repository \
+        aws ecr create-repository \
           --repository-name ${{ secrets.ECR_REPO_NAME }} \
-          --region eu-west-1
+          --region ${{ secrets.AWS_REGION }}
 
-    - name: Login to Amazon ECR Public
-      run: aws ecr-public get-login-password --region eu-west-1 | \
-           docker login --username AWS \
-           --password-stdin public.ecr.aws/${{ secrets.ECR_PUBLIC_ALIAS }}
+    - name: Login to Amazon ECR
+      run: |
+        aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
+        docker login --username AWS \
+        --password-stdin "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com"
 
     - name: Build Docker image
       run: |
-        IMAGE_TAG="public.ecr.aws/${{ secrets.ECR_PUBLIC_ALIAS }}/${{ secrets.ECR_REPO_NAME }}"
-        docker build -t $IMAGE_TAG .
+        IMAGE_TAG="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPO_NAME }}"
+        docker build -t "$IMAGE_TAG" .
         echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
-    - name: Push Docker image to Amazon ECR Public
+    - name: Push Docker image to Amazon ECR
       run: |
-        docker push $IMAGE_TAG
+        docker push "$IMAGE_TAG"
       env:
         IMAGE_TAG: ${{ env.IMAGE_TAG }}
