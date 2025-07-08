@@ -35,24 +35,14 @@ jobs:
           --repository-name ${{ secrets.ECR_REPO_NAME }} \
           --region ${{ secrets.AWS_REGION }}
 
-    - name: Debug ECR registry values
-      run: |
-        echo "Account ID: ${{ secrets.AWS_ACCOUNT_ID }}"
-        echo "Region: ${{ secrets.AWS_REGION }}"
-        echo "ECR URL: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com"
-
-
     - name: Login to Amazon ECR
-      run: |
-        aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
-        docker login --username AWS \
-        --password-stdin "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com"
+      uses: aws-actions/amazon-ecr-login@v2
 
     - name: Build Docker image
       run: |
-        IMAGE_TAG="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPO_NAME }}"
-        docker build -t "$IMAGE_TAG" .
+        IMAGE_TAG="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPO_NAME }}:latest"
         echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+        docker build -t "$IMAGE_TAG" .
 
     - name: Push Docker image to Amazon ECR
       run: |
