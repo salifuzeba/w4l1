@@ -4,9 +4,6 @@ on:
   push:
     branches: [ main ]
 
-env:
-  IMAGE_TAG: latest
-
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -32,23 +29,21 @@ jobs:
     - name: Create ECR private repo if not exists
       run: |
         aws ecr describe-repositories \
-          --region ${{ secrets.AWS_REGION }} \
           --repository-names ${{ secrets.ECR_REPO_NAME }} || \
         aws ecr create-repository \
-          --repository-name ${{ secrets.ECR_REPO_NAME }} \
-          --region ${{ secrets.AWS_REGION }}
+          --repository-name ${{ secrets.ECR_REPO_NAME }}
 
     - name: Login to Amazon ECR
       uses: aws-actions/amazon-ecr-login@v2
 
-    - name: Build Docker image
+    - name: Build and Tag Docker image
       run: |
-        docker build -t ${{ secrets.ECR_REPOSITORY_NAME }}:${{ env.IMAGE_TAG }} .
-        docker tag ${{ secrets.ECR_REPOSITORY_NAME }}:${{ env.IMAGE_TAG }} \
-          ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY_NAME }}:${{ env.IMAGE_TAG }} 
+        IMAGE_URI="${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPO_NAME }}:latest"
+        docker build -t "$IMAGE_URI" .
+        echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
 
     - name: Push Docker image to Amazon ECR
       run: |
-        docker push "$IMAGE_TAG"
+        docker push "$IMAGE_URI"
       env:
-        IMAGE_TAG: ${{ env.IMAGE_TAG }}
+        IMAGE_URI: ${{ env.IMAGE_URI }}
